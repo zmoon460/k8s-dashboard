@@ -1,0 +1,311 @@
+apiVersion: v1
+data:
+  prometheus.yml: |
+    global:
+      external_labels:
+        monitor: prometheus
+    scrape_configs:
+      - job_name: prometheus
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+              - default
+        metrics_path: /metrics
+        relabel_configs:
+          - source_labels:
+              - job
+            target_label: __tmp_prometheus_job_name
+          - action: keep
+            source_labels:
+              - __meta_kubernetes_service_label_app_kubernetes_io_component
+              - __meta_kubernetes_service_labelpresent_app_kubernetes_io_component
+            regex: (server);true
+          - action: keep
+            source_labels:
+              - __meta_kubernetes_service_label_app_kubernetes_io_instance
+              - __meta_kubernetes_service_labelpresent_app_kubernetes_io_instance
+            regex: (prometheus);true
+          - action: keep
+            source_labels:
+              - __meta_kubernetes_service_label_app_kubernetes_io_name
+              - __meta_kubernetes_service_labelpresent_app_kubernetes_io_name
+            regex: (prometheus);true
+          - action: keep
+            source_labels:
+              - __meta_kubernetes_endpoint_port_name
+            regex: http
+          - source_labels:
+              - __meta_kubernetes_endpoint_address_target_kind
+              - __meta_kubernetes_endpoint_address_target_name
+            separator: ;
+            regex: Node;(.*)
+            replacement: ${1}
+            target_label: node
+          - source_labels:
+              - __meta_kubernetes_endpoint_address_target_kind
+              - __meta_kubernetes_endpoint_address_target_name
+            separator: ;
+            regex: Pod;(.*)
+            replacement: ${1}
+            target_label: pod
+          - source_labels:
+              - __meta_kubernetes_namespace
+            target_label: namespace
+          - source_labels:
+              - __meta_kubernetes_service_name
+            target_label: service
+          - source_labels:
+              - __meta_kubernetes_pod_name
+            target_label: pod
+          - source_labels:
+              - __meta_kubernetes_pod_container_name
+            target_label: container
+          - action: drop
+            source_labels:
+              - __meta_kubernetes_pod_phase
+            regex: (Failed|Succeeded)
+          - source_labels:
+              - __meta_kubernetes_service_name
+            target_label: job
+            replacement: ${1}
+          - target_label: endpoint
+            replacement: http
+          - source_labels:
+              - __address__
+            target_label: __tmp_hash
+            modulus: 1
+            action: hashmod
+          - source_labels:
+              - __tmp_hash
+            regex: 0
+            action: keep
+
+      - job_name: 'k8s-kubelet'
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+        - role: node
+        relabel_configs:
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/${1}/proxy/metrics
+
+      - job_name: kube-state-metrics
+        kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+            - kube-system
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
+          regex: kube-state-metrics
+          replacement: $1
+          action: keep
+
+      - job_name: 'k8s-cadvisor'
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+        - role: node
+        relabel_configs:
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+        metric_relabel_configs:
+        - source_labels: [instance]
+          separator: ;
+          regex: (.+)
+          target_label: node
+          replacement: $1
+          action: replace
+
+      - job_name: alertmanager
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+              - default
+        metrics_path: /metrics
+        relabel_configs:
+          - source_labels:
+              - job
+            target_label: __tmp_prometheus_job_name
+          - action: keep
+            source_labels:
+              - __meta_kubernetes_service_label_app_kubernetes_io_component
+              - __meta_kubernetes_service_labelpresent_app_kubernetes_io_component
+            regex: (alertmanager);true
+          - action: keep
+            source_labels:
+              - __meta_kubernetes_service_label_app_kubernetes_io_instance
+              - __meta_kubernetes_service_labelpresent_app_kubernetes_io_instance
+            regex: (prometheus);true
+          - action: keep
+            source_labels:
+              - __meta_kubernetes_service_label_app_kubernetes_io_name
+              - __meta_kubernetes_service_labelpresent_app_kubernetes_io_name
+            regex: (prometheus);true
+          - action: keep
+            source_labels:
+              - __meta_kubernetes_endpoint_port_name
+            regex: http
+          - source_labels:
+              - __meta_kubernetes_endpoint_address_target_kind
+              - __meta_kubernetes_endpoint_address_target_name
+            separator: ;
+            regex: Node;(.*)
+            replacement: ${1}
+            target_label: node
+          - source_labels:
+              - __meta_kubernetes_endpoint_address_target_kind
+              - __meta_kubernetes_endpoint_address_target_name
+            separator: ;
+            regex: Pod;(.*)
+            replacement: ${1}
+            target_label: pod
+          - source_labels:
+              - __meta_kubernetes_namespace
+            target_label: namespace
+          - source_labels:
+              - __meta_kubernetes_service_name
+            target_label: service
+          - source_labels:
+              - __meta_kubernetes_pod_name
+            target_label: pod
+          - source_labels:
+              - __meta_kubernetes_pod_container_name
+            target_label: container
+          - action: drop
+            source_labels:
+              - __meta_kubernetes_pod_phase
+            regex: (Failed|Succeeded)
+          - source_labels:
+              - __meta_kubernetes_service_name
+            target_label: job
+            replacement: ${1}
+          - target_label: endpoint
+            replacement: http
+          - source_labels:
+              - __address__
+            target_label: __tmp_hash
+            modulus: 1
+            action: hashmod
+          - source_labels:
+              - __tmp_hash
+            regex: 0
+            action: keep
+    alerting:
+      alertmanagers:
+        - scheme: HTTP
+          static_configs:
+            - targets: [ "prometheus-alertmanager:80" ]
+    rule_files:
+      - rules.yaml
+  rules.yaml: '{}'
+kind: ConfigMap
+metadata:
+  name: prometheus-server
+  namespace: monitoring
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes # 服务发现节点
+      - nodes/proxy # 代理访问节点指标
+      - nodes/metrics # 直接读取节点指标
+      - pods # 发现 Pod
+      - services # 发现 Service
+      - endpoints # 发现 Endpoints
+    verbs: ["get", "list", "watch"]
+  - nonResourceURLs: # 覆盖所有指标端点
+      - /metrics
+      - /metrics/cadvisor
+      - /metrics/resource
+      - /stats/summary
+    verbs: ["get"]
+  - apiGroups: ["networking.k8s.io"] # 监控 Ingress
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: monitoring
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-server
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-server
+  template:
+    metadata:
+      labels:
+        app: prometheus-server
+    spec:
+      serviceAccountName: prometheus
+      containers:
+        - name: prometheus
+          image: hub.cloudcc.site/prom/prometheus:v3.4.1
+          env:
+            - name: TZ
+              value: "Asia/Shanghai"
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/prometheus
+      volumes:
+        - name: config-volume
+          configMap:
+            name: prometheus-server
+            defaultMode: 420
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: monitoring
+spec:
+  selector:
+    app: prometheus-server
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9090
+  type: LoadBalancer

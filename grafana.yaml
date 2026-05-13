@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: grafana
+  name: grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+        supplementalGroups:
+          - 0
+      containers:
+        - name: grafana
+          image: hub.cloudcc.site/grafana/grafana-oss:10.4.19
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TZ
+              value: "Asia/Shanghai"
+            - name: GF_USERS_DEFAULT_LANGUAGE
+              value: "zh-Hans"
+            - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+              value: "/var/lib/grafana/dashboards/13105_rev8.json"
+            - name: GF_UPDATES_ENABLED
+              value: "false"
+            - name: GF_EXTERNAL_IMAGE_STORAGE_ENABLED
+              value: "false"
+            - name: GF_USERS_DEFAULT_HOME_DASHBOARD_UID
+              value: "StarsL_K8S"
+            - name: GF_ANALYTICS_ENABLED
+              value: "false"
+            - name: GF_ANALYTICS_CHECK_FOR_UPDATES
+              value: "false"
+            - name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES
+              value: "false"
+            - name: GF_ANALYTICS_REPORTING_ENABLED
+              value: "false"
+            - name: GF_ANALYTICS_GOOGLE_ANALYTICS_UA_ID
+              value: ""
+            - name: GF_ANALYTICS_GOOGLE_ANALYTICS_4_ID
+              value: ""
+            - name: GF_ANALYTICS_GOOGLE_TAG_MANAGER_ID
+              value: ""
+            - name: GF_ANALYTICS_RUDDERSTACK_WRITE_KEY
+              value: ""
+            - name: GF_ANALYTICS_RUDDERSTACK_DATA_PLANE_URL
+              value: ""
+            - name: GF_ANALYTICS_APPLICATION_INSIGHTS_CONNECTION_STRING
+              value: ""
+            - name: GF_ANALYTICS_FEEDBACK_LINKS_ENABLED
+              value: "false"
+            - name: GF_HELP_ENABLED
+              value: "false"
+            - name: GF_GRAFANA_NET_URL
+              value: ""
+            - name: GF_GRAFANA_COM_URL
+              value: "" 
+            - name: GF_NEWS_NEWS_FEED_ENABLED
+              value: "false"
+            - name: GF_UNIFIED_ALERTING_ENABLED
+              value: "false"
+            - name: GF_SECURITY_LOGIN_ATTEMPT_LIMIT
+              value: "0"
+            - name: GF_SECURITY_LOGIN_LOCKOUT_DURATION
+              value: "0"
+          ports:
+            - containerPort: 3000
+              name: http-grafana
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /robots.txt
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 2
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 3000
+            timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /var/lib/grafana
+              name: grafana-pv
+            - mountPath: /etc/grafana/provisioning/datasources/datasource.yaml
+              name: grafana-datasources
+              subPath: datasource.yaml
+            - mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml
+              name: grafana-dashboards-config
+              subPath: dashboards.yaml
+            - mountPath: /var/lib/grafana/dashboards/13105_rev8.json
+              name: grafana-dashboards
+              subPath: 13105_rev8.json
+      volumes:
+        - name: grafana-pv
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+        - name: grafana-datasources
+          configMap:
+            name: grafana-datasources
+        - name: grafana-dashboards-config
+          configMap:
+            name: grafana-dashboards-config
+        - name: grafana-dashboards
+          configMap:
+            name: grafana-dashboards
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  ports:
+    - port: 3000
+      protocol: TCP
+      targetPort: http-grafana
+  selector:
+    app: grafana
+  sessionAffinity: None
+  type: LoadBalancer
