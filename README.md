@@ -1,3 +1,4 @@
+
 # monitoring
 目标： 提供最简和快速的k8s下资源监控交付
 当前主服务部署到monitoring namespace下， metrics服务部署到kube-system namespace下
@@ -7,6 +8,7 @@
 中文面板来源：https://grafana.com/grafana/dashboards/13105-k8s-dashboard-cn-20240513-starsl-cn/ 
 感谢提供如此优秀的面板
 
+<img width="2517" height="1824" alt="k8s-grafana-demo" src="https://github.com/user-attachments/assets/2d28a957-7c4f-43a0-b54a-0d6822f4c7b1" />
 
 部署：
 
