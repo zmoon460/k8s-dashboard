@@ -281,7 +281,7 @@ spec:
       serviceAccountName: prometheus
       containers:
         - name: prometheus
-          image: hub.cloudcc.site/prom/prometheus:v3.4.1
+          image: prom/prometheus:v3.11.3
           env:
             - name: TZ
               value: "Asia/Shanghai"
