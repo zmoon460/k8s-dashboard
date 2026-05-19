@@ -35,7 +35,7 @@ spec:
           - 0
       containers:
         - name: grafana
-          image: hub.cloudcc.site/grafana/grafana-oss:10.4.19
+          image: grafana/grafana-oss:13.0.1-security-01-ubuntu
           imagePullPolicy: IfNotPresent
           env:
             - name: TZ
