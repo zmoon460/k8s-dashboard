@@ -1,4 +1,0 @@
-hub.cloudcc.site/grafana/grafana-oss:10.4.19
-hub.cloudcc.site/kube-state-metrics/kube-state-metrics:v2.15.0
-hub.cloudcc.site/prom/node-exporter:v1.9.1
-hub.cloudcc.site/prom/prometheus:v3.4.1
